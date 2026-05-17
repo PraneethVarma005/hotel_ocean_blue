@@ -4,12 +4,14 @@ const mobileNav = document.getElementById("mobileNav");
 
 if (menuToggle && mobileNav) {
   menuToggle.addEventListener("click", () => {
-    mobileNav.classList.toggle("active");
+    const isOpen = mobileNav.classList.toggle("active");
+    menuToggle.setAttribute("aria-expanded", String(isOpen));
   });
 
   document.querySelectorAll(".mobile-nav a").forEach(link => {
     link.addEventListener("click", () => {
       mobileNav.classList.remove("active");
+      menuToggle.setAttribute("aria-expanded", "false");
     });
   });
 }
@@ -17,18 +19,58 @@ if (menuToggle && mobileNav) {
 // Reveal animations
 const revealEls = document.querySelectorAll(".reveal, .reveal-up, .reveal-left, .reveal-right");
 
-const revealObserver = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      entry.target.classList.add("show");
-      revealObserver.unobserve(entry.target);
-    }
-  });
-}, {
-  threshold: 0.12
+const revealObserver = "IntersectionObserver" in window
+  ? new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("show");
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" })
+  : null;
+
+revealEls.forEach(el => {
+  if (revealObserver) {
+    revealObserver.observe(el);
+  } else {
+    el.classList.add("show");
+  }
 });
 
-revealEls.forEach(el => revealObserver.observe(el));
+// Defer decorative hero video until the hero image has painted.
+const heroVideo = document.querySelector(".hero-video[data-src]");
+
+function loadHeroVideo() {
+  if (!heroVideo || heroVideo.dataset.loaded === "true") return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const source = document.createElement("source");
+  source.src = heroVideo.dataset.src;
+  source.type = heroVideo.dataset.type || "video/webm";
+  heroVideo.appendChild(source);
+  heroVideo.dataset.loaded = "true";
+  heroVideo.load();
+
+  heroVideo.addEventListener("canplay", () => {
+    heroVideo.classList.add("is-ready");
+    heroVideo.play().catch(() => {});
+  }, { once: true });
+}
+
+window.addEventListener("load", () => {
+  const startVideo = () => {
+    if (window.matchMedia("(min-width: 769px)").matches) {
+      loadHeroVideo();
+    }
+  };
+
+  if ("requestIdleCallback" in window) {
+    requestIdleCallback(startVideo, { timeout: 2500 });
+  } else {
+    window.setTimeout(startVideo, 1200);
+  }
+}, { once: true });
 
 // Gallery Lightbox + Load More + Swipe + Prev/Next
 const galleryItems = Array.from(document.querySelectorAll(".gallery-item"));
@@ -41,6 +83,18 @@ const loadMoreGalleryBtn = document.getElementById("loadMoreGallery");
 
 const galleryImages = galleryItems.map(item => item.getAttribute("data-img"));
 let currentIndex = 0;
+
+function hydrateGalleryImage(item) {
+  const img = item.querySelector("img[data-src]");
+  if (!img) return;
+
+  item.classList.add("is-loading");
+  img.src = img.dataset.src;
+  img.removeAttribute("data-src");
+  img.addEventListener("load", () => {
+    item.classList.remove("is-loading");
+  }, { once: true });
+}
 
 function showImage(index) {
   if (!galleryImages.length) return;
@@ -87,6 +141,7 @@ function prevImage() {
 
 galleryItems.forEach((item, index) => {
   item.addEventListener("click", () => {
+    hydrateGalleryImage(item);
     openLightbox(index);
   });
 });
@@ -101,11 +156,12 @@ if (loadMoreGalleryBtn) {
     const nextBatch = hiddenItems.slice(revealedCount, revealedCount + batchSize);
 
     nextBatch.forEach(item => {
+      hydrateGalleryImage(item);
       item.style.display = "block";
       item.classList.remove("hidden-gallery-item");
 
       // Re-observe for reveal animation if needed
-      if (item.classList.contains("reveal") || item.classList.contains("reveal-up") || item.classList.contains("reveal-left") || item.classList.contains("reveal-right")) {
+      if (revealObserver && (item.classList.contains("reveal") || item.classList.contains("reveal-up") || item.classList.contains("reveal-left") || item.classList.contains("reveal-right"))) {
         revealObserver.observe(item);
       }
     });
