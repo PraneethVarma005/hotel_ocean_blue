@@ -59,17 +59,17 @@ function loadHeroVideo() {
 }
 
 window.addEventListener("load", () => {
+
   const startVideo = () => {
-    if (window.matchMedia("(min-width: 769px)").matches) {
-      loadHeroVideo();
-    }
+    loadHeroVideo();
   };
 
   if ("requestIdleCallback" in window) {
-    requestIdleCallback(startVideo, { timeout: 2500 });
+    requestIdleCallback(startVideo, { timeout: 1500 });
   } else {
-    window.setTimeout(startVideo, 1200);
+    setTimeout(startVideo, 500);
   }
+
 }, { once: true });
 
 // Gallery Lightbox + Load More + Swipe + Prev/Next

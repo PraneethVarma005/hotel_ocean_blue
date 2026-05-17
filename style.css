@@ -289,17 +289,6 @@ p {
   height: 100%;
   object-fit: cover;
 }
-
-.hero-video {
-  z-index: 0;
-  opacity: 0;
-  transition: opacity 0.45s ease;
-}
-
-.hero-video.is-ready {
-  opacity: 1;
-}
-
 .hero-bg {
   z-index: 0;
   animation: heroZoom 10s ease-in-out infinite alternate;
